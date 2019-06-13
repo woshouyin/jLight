@@ -11,6 +11,7 @@ import com.fazecast.jSerialComm.SerialPortPacketListener;
 
 import wlight.control.LightControl;
 import wlight.control.LightControlException;
+import wlight.control.LightControlListener;
 
 public class PLightControl implements LightControl {
 	private int status = 0;
@@ -18,11 +19,10 @@ public class PLightControl implements LightControl {
 	private int[] sts;
 	private boolean playing;
 	
-	public PLightControl(String port) throws LightControlException {
-		SerialPort sp = SerialPort.getCommPorts()[0];
+	public PLightControl(SerialPort sp) throws LightControlException {
 		System.out.println(sp.toString() + ":" + sp.getPortDescription());
-		if(!sp.openPort()) {
-			throw new LightControlException("无法打开串口");
+		if(!sp.isOpen() && !sp.openPort()) {
+			throw new LightControlException(LightControlException.CAN_NOT_OPEN_PORT);
 		};
 		sp.addDataListener(new SerialPortDataListener() {
 			
@@ -69,7 +69,7 @@ public class PLightControl implements LightControl {
 	}
 
 	@Override
-	public void setSts(int[] sts, double delay) {
+	public void play(int[] sts, double delay) {
 		stop();
 		this.sts = sts;
 	}
@@ -98,16 +98,7 @@ public class PLightControl implements LightControl {
 
 
 	@Override
-	public void timeOut() {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	@Override
 	public void setCloseTime(long time) {
-		// TODO Auto-generated method stub
-		
 	}
 
 
@@ -115,6 +106,25 @@ public class PLightControl implements LightControl {
 	public void setOpenTime(long time) {
 		// TODO Auto-generated method stub
 		
+	}
+
+
+	@Override
+	public void addLightControlListener(LightControlListener listener) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public int getStatus() {
+		return 0;
+	}
+
+
+	@Override
+	public boolean isPlaying() {
+		return false;
 	}
 
 }

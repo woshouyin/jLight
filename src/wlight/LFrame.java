@@ -14,6 +14,10 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.imageio.ImageIO;
 import javax.swing.Box;
@@ -29,8 +33,25 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import com.fazecast.jSerialComm.SerialPort;
+
+import wlight.control.LChoice;
+import wlight.control.LightControl;
+import wlight.control.LightControlException;
+import wlight.control.LightControlListener;
+import wlight.control.excontrol.ExLightControl;
+
 public class LFrame extends JFrame{
 	private static final long serialVersionUID = 1L;
+
+	BufferedImage imSwitchOff = null;
+	BufferedImage imSwitchOn1 = null;
+	BufferedImage imSwitchOn2 = null;
+	BufferedImage imSwitchOn3 = null;
+	
+	
+	SerialPort[] sps = {};
+	LightControl lc = null;
 	
 	//top
 	JComboBox<String> jcbComs;
@@ -56,16 +77,22 @@ public class LFrame extends JFrame{
 		JPanel jpCenter = new JPanel();
 		JPanel jpBottom = new JPanel();
 		
-		jpCenter.setBackground(Color.white);
+		//jpCenter.setBackground(Color.white);
 		
-		//Top |COM|CONNECT|STATUS|		|TIME
-		String[] comsStr = new String[15];
-		for(int i = 0; i < 15; i++) {
-			comsStr[i] = "COM" + i;
+		//加载资源
+		try {
+			imSwitchOff = ImageIO.read(LFrame.class.getResource("resource/switchOff.png"));
+			imSwitchOn1 = ImageIO.read(LFrame.class.getResource("resource/switchOn1.png"));
+			imSwitchOn2 = ImageIO.read(LFrame.class.getResource("resource/switchOn2.png"));
+			imSwitchOn3 = ImageIO.read(LFrame.class.getResource("resource/switchOn3.png"));
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		jcbComs = new JComboBox<String>(comsStr);
+
+		JLabel jlbSf = new JLabel("状态:");
+		jcbComs = new JComboBox<String>();
 		jbConn = new JButton("连接");
-		jlbStatus = new JLabel("状态:未连接");
+		jlbStatus = new JLabel("未连接");
 		jlbTime = new JLabel("11:11:11");
 		
 		JPanel jpTopLeft = new JPanel();
@@ -73,20 +100,13 @@ public class LFrame extends JFrame{
 		jpTop.add(jpTopLeft, BorderLayout.WEST);
 		jpTopLeft.add(jcbComs);
 		jpTopLeft.add(jbConn);
+		jpTopLeft.add(jlbSf);
 		jpTopLeft.add(jlbStatus);
 		jpTop.add(jlbTime, BorderLayout.EAST);
 		//Center |BOTTON1|BOTTON2|BOTTON3|
-		File fico = new File(LFrame.class.getResource("resource/switch.png").toString().split(":")[1]);
-		BufferedImage imSwitchOff = null;
-		try {
-			imSwitchOff = ImageIO.read(fico);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		ImageIcon switchOff = new ImageIcon();
-		jbL1 = new LButton(imSwitchOff);
-		jbL2 = new LButton(imSwitchOff);
-		jbL3 = new LButton(imSwitchOff);
+		jbL1 = new LButton(imSwitchOff, imSwitchOn1);
+		jbL2 = new LButton(imSwitchOff, imSwitchOn2);
+		jbL3 = new LButton(imSwitchOff, imSwitchOn3);
 		
 		jpCenter.setLayout(new GridLayout(1, 3));
 		jpCenter.add(jbL1);
@@ -141,8 +161,147 @@ public class LFrame extends JFrame{
 		this.add(jpCenter, BorderLayout.CENTER);
 		this.add(jpBottom, BorderLayout.SOUTH);
 		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		this.setVisible(true);
 		this.setBounds(300, 300, 900, 500);
+		
+		//连接按钮事件
+		jbConn.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent even) {
+				SerialPort sp = sps[jcbComs.getSelectedIndex()];
+				connect(sp);
+			}
+		});;
+		//中间三个按钮事件
+		jbL1.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				int st = lc.getStatus();
+				st = 1 - (st >> 0) % 2;
+				lc.put(1, st);
+				jbL1.put(st);				
+			}
+		});
+		
+		jbL2.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				int st = lc.getStatus();
+				st = 1 - (st >> 1) % 2;
+				lc.put(2, st);
+				jbL2.put(st);				
+			}
+		});
+		
+		jbL3.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				int st = lc.getStatus();
+				st = 1 - (st >> 2) % 2;
+				lc.put(3, jbL3.flip());			
+			}
+		});
 	
+		jbPlay.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent even) {
+				String[] strs = jtfPl.getText().replace(" ", "").split(",");
+				int[] sts = new int[strs.length];
+				for(int i = 0; i < strs.length; i++) {
+					sts[i] = Integer.parseInt(strs[i]);
+				}
+				double delay = Double.parseDouble(jtfPt.getText());
+				lc.play(sts, delay);
+			}
+		});
+		
+		Thread ft = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				String[][] names = {new String[32], new String[32]};
+				int f = 0;
+				
+				SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+				
+				while(true) {
+					//搜索端口
+					SerialPort[] tsps = SerialPort.getCommPorts();
+					
+					boolean flag = (tsps.length == sps.length);
+					for (int i = 0; i < tsps.length; i++) {
+						names[f][i] = tsps[i].getSystemPortName() + ":" + tsps[i].getDescriptivePortName();
+						if(flag && !names[f][i].equals(names[1-f][i])) {
+							flag = false;
+						}
+					}
+					
+					if(!flag) {
+						sps = tsps;
+						jcbComs.removeAllItems();
+						for (int i = 0; i < sps.length; i++) {
+							jcbComs.addItem(names[f][i]);
+							System.out.println(names[f][i]);
+						}
+					}
+					f = 1 - f;
+					
+					//时钟
+					jlbTime.setText(sdf.format(new Date()));
+					
+				}
+			}
+		});
+		
+		ft.start();
+		this.setVisible(true);
+	}
+	
+	public void setStatusStr(String str, Color c) {
+		jlbStatus.setForeground(c);
+		jlbStatus.setText(str);
+	}
+	
+	public void connect(SerialPort sp) {
+		try {
+			if(lc != null) {
+				lc.close();
+			}
+			//lc = LChoice.getLightControl(sp);
+			lc = new ExLightControl(sp);
+		} catch (LightControlException e) {
+			setStatusStr("连接失败", Color.RED);
+			e.printStackTrace();
+		}
+		
+		lc.addLightControlListener(new LightControlListener() {
+			
+			@Override
+			public void setStatus(int ctStatus) {
+				jbL1.put(ctStatus % 2);
+				jbL2.put((ctStatus >> 1) % 2);
+				jbL3.put((ctStatus >> 2) % 2);
+			}
+			
+			@Override
+			public void exceptionCatched(LightControlException e) {
+				switch (e.getFlag()) {
+				case LightControlException.NO_RESPONSE:
+					System.out.println("wuxiangy");
+					setStatusStr("无响应", Color.RED);
+					break;
+
+				default:
+					break;
+				}
+			}
+		});
+		
+
+		setStatusStr("连接成功", Color.GREEN);
 	}
 }

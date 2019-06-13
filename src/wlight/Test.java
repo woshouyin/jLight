@@ -10,11 +10,6 @@ import wlight.control.pcontrol.PLightControl;
 public class Test {
 	public static void main(String[] args) {
 		new LFrame();
-		try {
-			new PLightControl("COM3");
-		} catch (LightControlException e) {
-			e.printStackTrace();
-		}
 	}
 
 }
