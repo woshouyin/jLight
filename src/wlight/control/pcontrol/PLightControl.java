@@ -57,7 +57,7 @@ public class PLightControl implements LightControl {
 
 	@Override
 	public void setStatus(int status) {
-		
+		this.status = status;
 	}
 
 	@Override
