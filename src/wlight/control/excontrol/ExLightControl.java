@@ -44,7 +44,7 @@ public class ExLightControl implements LightControl{
 				int t = 0;
 				while(runningFlag) {
 					//检测响应
-					if(clock - lastAliveTime > ttl * 11) {
+					if(clock - lastAliveTime > ttl * 50) {
 						noResponse();
 					}
 					//接收传入并处理
@@ -64,7 +64,7 @@ public class ExLightControl implements LightControl{
 						}
 					}
 					//发送心跳
-					if(clock % (ttl * 1) == 0) {
+					if(clock % (ttl * 50) == 0) {
 						synchronized (sp) {
 							send((byte)0x40, null);
 						}
@@ -89,7 +89,7 @@ public class ExLightControl implements LightControl{
 	private void input(byte inp, long time) {
 		//System.out.println("0x" + Integer.toHexString(inp));
 		WaitBean b = wait.peek();
-		
+
 		if(inp > 7||inp <0) {
 			System.out.println("0x" + Integer.toHexString(inp) + ":" + "0x" + (b == null ? null:Integer.toHexString(b.msg)));
 		}
@@ -102,10 +102,8 @@ public class ExLightControl implements LightControl{
 				if (b != null && b.msg <= 7 && b.msg >= 0) {
 					wait.remove();
 				}
-				if (status != inp) {
-					status = inp;
-					update();
-				}
+				status = inp;
+				update();
 			}else if(inp == 0x50 || inp == 0xF0){
 				isRolling = false;
 				update();

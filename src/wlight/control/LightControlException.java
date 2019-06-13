@@ -1,5 +1,8 @@
 package wlight.control;
 
+/**
+ * 控制器异常类，使用Flag标记不同的错误类型
+ */
 public class LightControlException extends Exception{
 	private static final long serialVersionUID = 1L;
 	public static final int TIME_OUT = 0;
@@ -8,7 +11,14 @@ public class LightControlException extends Exception{
 	
 	private String msg;
 	private int flag;
-	
+	/**
+	 * 初始化异常
+	 * @param flag
+	 * 错误类型，可用的有：
+	 * 		TIME_OUT
+	 * 		CAN_NOT_OPEN_PORT 
+	 * 		NO_RESPONSE
+	 */
 	public LightControlException(int flag) {
 		this.flag = flag;
 		switch (flag) {
@@ -24,11 +34,15 @@ public class LightControlException extends Exception{
 		}
 	}
 	
+
 	@Override
 	public String getMessage() {
 		return msg;
 	}
 	
+	/**
+	 * 获取当前错误类型
+	 */
 	public int getFlag() {
 		return flag;
 	}

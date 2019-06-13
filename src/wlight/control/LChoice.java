@@ -5,6 +5,9 @@ import com.fazecast.jSerialComm.SerialPort;
 import wlight.control.excontrol.ExLightControl;
 import wlight.control.pcontrol.PLightControl;
 
+/**
+ * 用于对不同的串口选择不同的控制器
+ */
 public class LChoice {
 	public static LightControl getLightControl(SerialPort sp) throws LightControlException {
 		byte[] buffer = new byte[64];

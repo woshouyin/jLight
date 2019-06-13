@@ -180,7 +180,7 @@ public class LFrame extends JFrame{
 				int st = lc.getStatus();
 				st = 1 - (st >> 0) % 2;
 				lc.put(1, st);
-				jbL1.put(st);				
+				//jbL1.put(st);				
 			}
 		});
 		
@@ -191,7 +191,7 @@ public class LFrame extends JFrame{
 				int st = lc.getStatus();
 				st = 1 - (st >> 1) % 2;
 				lc.put(2, st);
-				jbL2.put(st);				
+				//jbL2.put(st);				
 			}
 		});
 		
@@ -201,7 +201,8 @@ public class LFrame extends JFrame{
 			public void actionPerformed(ActionEvent arg0) {
 				int st = lc.getStatus();
 				st = 1 - (st >> 2) % 2;
-				lc.put(3, jbL3.flip());			
+				lc.put(3, st);
+				//jbL3.put(st);		
 			}
 		});
 	
@@ -282,6 +283,7 @@ public class LFrame extends JFrame{
 			
 			@Override
 			public void setStatus(int ctStatus) {
+				System.out.println(ctStatus & 0x07);
 				jbL1.put(ctStatus % 2);
 				jbL2.put((ctStatus >> 1) % 2);
 				jbL3.put((ctStatus >> 2) % 2);
@@ -291,7 +293,6 @@ public class LFrame extends JFrame{
 			public void exceptionCatched(LightControlException e) {
 				switch (e.getFlag()) {
 				case LightControlException.NO_RESPONSE:
-					System.out.println("wuxiangy");
 					setStatusStr("无响应", Color.RED);
 					break;
 
