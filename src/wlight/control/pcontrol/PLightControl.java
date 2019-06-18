@@ -22,6 +22,7 @@ public class PLightControl implements LightControl {
 	private long delay;
 	private int a = 0;
 	private LightControlListener listener;
+	private boolean timing;
 	
 	public PLightControl(SerialPort sp) throws LightControlException {
 		this.sp = sp;
@@ -29,34 +30,71 @@ public class PLightControl implements LightControl {
 		if(!sp.isOpen() && !sp.openPort()) {
 			throw new LightControlException(LightControlException.CAN_NOT_OPEN_PORT);
 		};
-		sp.addDataListener(new SerialPortDataListener() {
-			
+//		sp.addDataListener(new SerialPortDataListener() {
+//			
+//			@Override
+//			public void serialEvent(SerialPortEvent env) {
+//				if (env.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE) {
+//					byte[] buff = new byte[10];
+//					int t = sp.readBytes(buff, 10);
+//					for(int i = 0; i < t; i++) {
+////						System.out.println(new Date().getTime());
+//						System.out.println(buff[i]);
+//					}
+//				}
+//			}
+//			@Override
+//			public int getListeningEvents() {
+//				return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
+//			}
+//		});
+//		System.out.println(new Date().getTime());
+		
+		new Thread(new Runnable() {
+			int s = 0;
 			@Override
-			public void serialEvent(SerialPortEvent env) {
-				if (env.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE) {
-					byte[] buff = new byte[10];
-					int t = sp.readBytes(buff, 10);
-					for(int i = 0; i < t; i++) {
-						System.out.println(new Date().getTime());
-						System.out.println(buff[i]);
+			public void run() {
+				while(true) {
+					
+					byte[] buffw = {0x40};
+					byte[] buffr = new byte[10];
+					sp.writeBytes(buffw, 1);
+					try {
+						Thread.sleep(300);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					int t = sp.readBytes(buffr, 10);
+					if(t == 0) {
+						s++;
+					}else {
+						s = 0;
+					}
+					System.out.println("r:"+buffr[0]);
+					System.out.println("t:"+t);
+					System.out.println("s:"+s);
+					if(s>10) {
+						LightControlException en = 
+								new LightControlException(LightControlException.NO_RESPONSE);
+						listener.exceptionCatched(en);
+						close();
+						break;
+					}
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
 				}
 			}
-			@Override
-			public int getListeningEvents() {
-				return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
-			}
-		});
-		System.out.println(new Date().getTime());
-		byte[] buffer = {(byte)1};
-		sp.writeBytes(buffer, 1);
-		
-		
+		}).start();
 	}
 	
 	
 	@Override
 	public void close() {
+		timing = false;
+		playing = false;
 		sp.closePort();
 	}
 
@@ -125,7 +163,6 @@ public class PLightControl implements LightControl {
 			
 			@Override
 			public void run() {
-				// TODO Auto-generated method stub
 				while(playing) {
 					put(sts[a]);
 					a = (a + 1) % sts.length;
@@ -147,12 +184,60 @@ public class PLightControl implements LightControl {
 
 	@Override
 	public void setCloseTime(long time) {
+		if(time>=0) {
+			timing = true;
+			new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					
+					while(System.currentTimeMillis()<time&&timing) {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+					if(timing) {
+						put(1,0);
+						put(2,0);
+						put(3,0);
+					}
+				}
+			}).start();
+		}
+		
 	}
 
 
 	@Override
 	public void setOpenTime(long time) {
-		
+		if(time>=0) {
+			new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					
+					while(System.currentTimeMillis()<time&&timing) {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+					if(timing) {
+						put(1,1);
+						put(2,1);
+						put(3,1);
+					}
+					
+				}
+			}).start();
+		}
+	}
+	
+	public void cancel() {
+		timing = false;
 	}
 
 

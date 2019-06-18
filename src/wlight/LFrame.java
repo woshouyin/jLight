@@ -283,6 +283,7 @@ public class LFrame extends JFrame{
 			}
 		});
 		
+		
 		ft.start();
 		this.setVisible(true);
 	}
