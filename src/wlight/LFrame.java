@@ -32,6 +32,8 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import com.fazecast.jSerialComm.SerialPort;
 
@@ -52,6 +54,7 @@ public class LFrame extends JFrame{
 	
 	SerialPort[] sps = {};
 	LightControl lc = null;
+	boolean isConnected = false;
 	
 	//top
 	JComboBox<String> jcbComs;
@@ -144,7 +147,7 @@ public class LFrame extends JFrame{
 		//Bottom |"设定开始"|Text|”设定关闭“|Text|BOTTON
 		JPanel jpBottomDown = new JPanel();
 		JLabel jlB3 = new JLabel("开启时间:");
-		JLabel jlB4 = new JLabel("关闭时间");
+		JLabel jlB4 = new JLabel("关闭时间:");
 		jtfTst = new JTextField();
 		jtfTcl = new JTextField();
 		jbTset = new JButton("设置");
@@ -163,13 +166,17 @@ public class LFrame extends JFrame{
 		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
 		this.setBounds(300, 300, 900, 500);
 		
-		//连接按钮事件
+		//连接按钮事件JCheckBox jcbW
 		jbConn.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent even) {
-				SerialPort sp = sps[jcbComs.getSelectedIndex()];
-				connect(sp);
+				if(!isConnected) {
+					SerialPort sp = sps[jcbComs.getSelectedIndex()];
+					connect(sp);
+				}else {
+					disconnect();
+				}
 			}
 		});;
 		//中间三个按钮事件
@@ -203,6 +210,19 @@ public class LFrame extends JFrame{
 				st = 1 - (st >> 2) % 2;
 				lc.put(3, st);
 				//jbL3.put(st);		
+			}
+		});
+		
+		jcbWt.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(jcbWt.isSelected()) {
+					jtfPl.setText("1,3,7");
+					jtfPl.setEditable(false);
+				}else {
+					jtfPl.setEditable(true);
+				}
 			}
 		});
 	
@@ -246,7 +266,6 @@ public class LFrame extends JFrame{
 						jcbComs.removeAllItems();
 						for (int i = 0; i < sps.length; i++) {
 							jcbComs.addItem(names[f][i]);
-							System.out.println(names[f][i]);
 						}
 					}
 					f = 1 - f;
@@ -272,30 +291,42 @@ public class LFrame extends JFrame{
 			if(lc != null) {
 				lc.close();
 			}
-			//lc = LChoice.getLightControl(sp);
-			lc = new ExLightControl(sp);
+			lc = LChoice.getLightControl(sp);
+			if(lc instanceof ExLightControl) {
+				System.out.println("ExLightControl");
+			}else {
+				System.out.println("PLightControl");
+			}
 		} catch (LightControlException e) {
 			setStatusStr("连接失败", Color.RED);
 			e.printStackTrace();
 		}
-		
+		this.isConnected = true;
+		this.jbConn.setText("断开");
 		lc.addLightControlListener(new LightControlListener() {
 			
 			@Override
 			public void setStatus(int ctStatus) {
-				System.out.println(ctStatus & 0x07);
 				jbL1.put(ctStatus % 2);
 				jbL2.put((ctStatus >> 1) % 2);
 				jbL3.put((ctStatus >> 2) % 2);
+				if((ctStatus >> 3) % 2 == 1) {
+					
+				}
+				if((ctStatus >> 4) % 2 == 1) {
+					setStatusStr("恢复正常", Color.GREEN);
+				}
 			}
 			
 			@Override
 			public void exceptionCatched(LightControlException e) {
 				switch (e.getFlag()) {
 				case LightControlException.NO_RESPONSE:
-					setStatusStr("无响应", Color.RED);
+					disconnect();
 					break;
-
+				case LightControlException.TIME_OUT:
+					setStatusStr("响应可能超时或丢失", Color.yellow);
+					break;
 				default:
 					break;
 				}
@@ -304,5 +335,14 @@ public class LFrame extends JFrame{
 		
 
 		setStatusStr("连接成功", Color.GREEN);
+	}
+	
+	public void disconnect() {
+		lc.close();
+		lc = null;
+		isConnected = false;
+		this.setStatusStr("已断开", Color.RED);
+		jbConn.setText("连接");
+		
 	}
 }

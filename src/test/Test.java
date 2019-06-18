@@ -9,7 +9,9 @@ import javax.sql.rowset.serial.SerialDatalink;
 import com.fazecast.jSerialComm.SerialPort;
 
 public class Test {
+	String a = "Hello";
 	public static void main(String[] args) {
+		/*
 		SerialPort sp = SerialPort.getCommPorts()[0];
 		sp.setBaudRate(9600);
 		sp.openPort();
@@ -29,6 +31,21 @@ public class Test {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+		}
+		*/
+		Test t = new Test();
+		t.da();
+	}
+	
+	void da() {
+		synchronized (a) {
+			System.out.println("da:" + a);
+			db();
+		}
+	}
+	void db() {
+		synchronized (a) {
+			System.out.println("db:" + a);
 		}
 	}
 }

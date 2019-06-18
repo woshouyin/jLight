@@ -23,10 +23,13 @@ public class LightControlException extends Exception{
 		this.flag = flag;
 		switch (flag) {
 		case TIME_OUT:
-			msg = "响应超时";
+			msg = "超时或丢失";
 			break;
 		case CAN_NOT_OPEN_PORT:
 			msg = "无法打开端口";
+			break;
+		case NO_RESPONSE:
+			msg = "无响应";
 			break;
 		default:
 			msg = "异常标志错误";

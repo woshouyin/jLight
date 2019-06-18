@@ -7,13 +7,14 @@ import java.util.Calendar;
 import com.fazecast.jSerialComm.SerialPort;
 
 import wlight.control.excontrol.ExLightControl;
-import wlight.control.pcontrol.PLightControl;
 
 public interface LightControl {
 	/**
 	 * 设置当前led灯的状态
 	 * @param status
-	 * 状态三位二进制数， 从低到高分别标识1-3号灯， 0为关1为开
+	 * 状态5位二进制数， 从低到高前三位分别标识1-3号灯， 0为关1为开
+	 * 第四位表示播放状态
+	 * 第五位表示异常恢复
 	 */
 	public void setStatus(int status);
 	/**
