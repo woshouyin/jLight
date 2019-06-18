@@ -41,7 +41,9 @@ import wlight.control.LChoice;
 import wlight.control.LightControl;
 import wlight.control.LightControlException;
 import wlight.control.LightControlListener;
+import wlight.control.LoseConnectException;
 import wlight.control.excontrol.ExLightControl;
+import wlight.control.pcontrol.PLightControl;
 
 public class LFrame extends JFrame{
 	private static final long serialVersionUID = 1L;
@@ -75,6 +77,8 @@ public class LFrame extends JFrame{
 	JTextField jtfTcl;
 	JButton jbTset;
 	
+	//
+	boolean connect;
 	public LFrame() {
 		JPanel jpTop = new JPanel();
 		JPanel jpCenter = new JPanel();
@@ -166,7 +170,12 @@ public class LFrame extends JFrame{
 		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
 		this.setBounds(300, 300, 900, 500);
 		
+<<<<<<< HEAD
 		//连接按钮事件JCheckBox jcbW
+=======
+		connect = false;
+		//连接按钮事件
+>>>>>>> 70c549b8fac7d45598624b10ca4c62618dcbe4dd
 		jbConn.addActionListener(new ActionListener() {
 			
 			@Override
@@ -186,8 +195,12 @@ public class LFrame extends JFrame{
 			public void actionPerformed(ActionEvent arg0) {
 				int st = lc.getStatus();
 				st = 1 - (st >> 0) % 2;
+<<<<<<< HEAD
 				lc.put(1, st);
 				//jbL1.put(st);				
+=======
+				lc.put(1, jbL1.flip());				
+>>>>>>> 70c549b8fac7d45598624b10ca4c62618dcbe4dd
 			}
 		});
 		
@@ -197,8 +210,12 @@ public class LFrame extends JFrame{
 			public void actionPerformed(ActionEvent arg0) {
 				int st = lc.getStatus();
 				st = 1 - (st >> 1) % 2;
+<<<<<<< HEAD
 				lc.put(2, st);
 				//jbL2.put(st);				
+=======
+				lc.put(2, jbL2.flip());			
+>>>>>>> 70c549b8fac7d45598624b10ca4c62618dcbe4dd
 			}
 		});
 		
@@ -236,7 +253,13 @@ public class LFrame extends JFrame{
 					sts[i] = Integer.parseInt(strs[i]);
 				}
 				double delay = Double.parseDouble(jtfPt.getText());
-				lc.play(sts, delay);
+				if(!lc.isPlaying()) {
+					lc.play(sts, delay);
+					jbPlay.setText("暂停");
+				}else {
+					lc.stop();
+					jbPlay.setText("播放");
+				}
 			}
 		});
 		
@@ -291,12 +314,18 @@ public class LFrame extends JFrame{
 			if(lc != null) {
 				lc.close();
 			}
+<<<<<<< HEAD
 			lc = LChoice.getLightControl(sp);
 			if(lc instanceof ExLightControl) {
 				System.out.println("ExLightControl");
 			}else {
 				System.out.println("PLightControl");
 			}
+=======
+			//lc = LChoice.getLightControl(sp);
+			//lc = new ExLightControl(sp);
+			lc = new PLightControl(sp);
+>>>>>>> 70c549b8fac7d45598624b10ca4c62618dcbe4dd
 		} catch (LightControlException e) {
 			setStatusStr("连接失败", Color.RED);
 			e.printStackTrace();
@@ -322,10 +351,15 @@ public class LFrame extends JFrame{
 			public void exceptionCatched(LightControlException e) {
 				switch (e.getFlag()) {
 				case LightControlException.NO_RESPONSE:
+<<<<<<< HEAD
 					disconnect();
 					break;
 				case LightControlException.TIME_OUT:
 					setStatusStr("响应可能超时或丢失", Color.yellow);
+=======
+					System.out.println("无响应");
+					setStatusStr("无响应", Color.RED);
+>>>>>>> 70c549b8fac7d45598624b10ca4c62618dcbe4dd
 					break;
 				default:
 					break;
@@ -335,6 +369,25 @@ public class LFrame extends JFrame{
 		
 
 		setStatusStr("连接成功", Color.GREEN);
+		connect = true;
+		new Thread(new  Runnable() {
+			public void run() {
+				try {
+					while(connect) {
+						connect = sp.isOpen();
+						if(connect == false) {
+							LoseConnectException lce =  
+									new LoseConnectException(connect); 
+							throw(lce);
+						}
+					}
+				} catch (LoseConnectException e) {
+					// TODO: handle exception
+					System.out.println(e.getMessage());
+					setStatusStr("连接中断", Color.RED);
+				}
+			}
+		}).start(); 
 	}
 	
 	public void disconnect() {

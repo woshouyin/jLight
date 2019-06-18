@@ -2,6 +2,7 @@ package wlight;
 
 import java.awt.Graphics;
 import java.awt.Image;
+import java.util.Calendar;
 
 import javax.swing.JButton;
 
@@ -15,6 +16,7 @@ public class LButton extends JButton{
 	public LButton(Image iconOff, Image iconOn) {
 		this.iconOff = iconOff;
 		this.iconOn = iconOn;
+
 		status = false;
 	}
 	
