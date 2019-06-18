@@ -70,9 +70,9 @@ public class PLightControl implements LightControl {
 					}else {
 						s = 0;
 					}
-					System.out.println("r:"+buffr[0]);
-					System.out.println("t:"+t);
-					System.out.println("s:"+s);
+//					System.out.println("r:"+buffr[0]);
+//					System.out.println("t:"+t);
+//					System.out.println("s:"+s);
 					if(s>10) {
 						LightControlException en = 
 								new LightControlException(LightControlException.NO_RESPONSE);
@@ -102,6 +102,9 @@ public class PLightControl implements LightControl {
 		int ctStatus = status;
 		if(playing) {
 			ctStatus += 8;
+		}
+		if(timing) {
+			ctStatus += 32;
 		}
 		return ctStatus;
 	}
@@ -185,7 +188,6 @@ public class PLightControl implements LightControl {
 	@Override
 	public void setCloseTime(long time) {
 		if(time>=0) {
-			timing = true;
 			new Thread(new Runnable() {
 				
 				@Override
@@ -202,6 +204,7 @@ public class PLightControl implements LightControl {
 						put(1,0);
 						put(2,0);
 						put(3,0);
+						timing = false;
 					}
 				}
 			}).start();
@@ -213,6 +216,7 @@ public class PLightControl implements LightControl {
 	@Override
 	public void setOpenTime(long time) {
 		if(time>=0) {
+			timing = true;
 			new Thread(new Runnable() {
 				
 				@Override
