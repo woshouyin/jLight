@@ -29,14 +29,9 @@ public class LightControlException extends Exception{
 		case CAN_NOT_OPEN_PORT:
 			msg = "无法打开端口";
 			break;
-<<<<<<< HEAD
 		case NO_RESPONSE:
 			msg = "无响应";
 			break;
-=======
-		case LOSE_CONNECTION:
-			msg = "连接中断";
->>>>>>> 70c549b8fac7d45598624b10ca4c62618dcbe4dd
 		default:
 			msg = "异常标志错误";
 			break;

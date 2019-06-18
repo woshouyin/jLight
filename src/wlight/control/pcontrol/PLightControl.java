@@ -21,6 +21,7 @@ public class PLightControl implements LightControl {
 	private boolean playing;
 	private long delay;
 	private int a = 0;
+	private LightControlListener listener;
 	
 	public PLightControl(SerialPort sp) throws LightControlException {
 		this.sp = sp;
@@ -59,21 +60,39 @@ public class PLightControl implements LightControl {
 		sp.closePort();
 	}
 
+	public int getCtStatus() {
+		int ctStatus = status;
+		if(playing) {
+			ctStatus += 8;
+		}
+		return ctStatus;
+	}
+	
 	@Override
 	public void setStatus(int status) {
-		this.status = status;
-		put(status);
+		if(listener!=null) {
+			byte[] buff = {(byte) (status)};
+//			System.out.println();
+			listener.setStatus(getCtStatus());
+			sp.writeBytes(buff, 1);
+		}
 	}
 
 	@Override
 	public void put(int light, int op) {
-		byte[] buff = {(byte) (light * 16 + op)};
-		sp.writeBytes(buff, 1);
+//		byte[] buff = {(byte) (light * 16 + op)};		
+		int mask = 1 << (light - 1);
+		if(op == 1) {
+			this.status = this.status | mask;
+		}else {
+			this.status = this.status & ~mask;
+		}
+		setStatus(status);
 	}
 	
 	public void put(int status) {
-		byte[] buff = {(byte) (status)};
-		sp.writeBytes(buff, 1);
+		this.status = status;
+		setStatus(status);
 //		try {
 //			Thread.sleep(300);
 //		} catch (InterruptedException e) {
@@ -102,15 +121,13 @@ public class PLightControl implements LightControl {
 	public void play() {
 		reset();
 		playing = true;
-		//int[] stsdefault = {1,2,4};
-		//long delay = 1000;
 		new Thread(new Runnable() {
 			
 			@Override
 			public void run() {
 				// TODO Auto-generated method stub
 				while(playing) {
-					setStatus(sts[a]);
+					put(sts[a]);
 					a = (a + 1) % sts.length;
 					try {
 						Thread.sleep(delay);
@@ -135,15 +152,13 @@ public class PLightControl implements LightControl {
 
 	@Override
 	public void setOpenTime(long time) {
-		// TODO Auto-generated method stub
 		
 	}
 
 
 	@Override
 	public void addLightControlListener(LightControlListener listener) {
-		// TODO Auto-generated method stub
-		
+		this.listener = listener;
 	}
 
 

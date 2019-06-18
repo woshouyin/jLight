@@ -13,6 +13,8 @@ public interface LightControlListener {
 	 * 	1.低3为位为三个灯的状态
 	 * 	2.第四位为动画播放状态
 	 * 	3.0为关闭，1为开启
+	 * 第四位表示播放状态
+	 * 第五位表示异常恢复
 	 */
 	public void setStatus(int ctStatus);
 }
