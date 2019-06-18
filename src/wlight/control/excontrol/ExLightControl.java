@@ -44,21 +44,24 @@ public class ExLightControl implements LightControl{
 			long rckt = 0;
 			@Override
 			public void run() {
-				//long bc = Calendar.getInstance().getTimeInMillis();
 				buffer = new byte[64];
 				t = 0;
 				while(runningFlag) {
 					if(closeTime != -1) {
+						System.out.println("close:\t" + ( closeTime - Calendar.getInstance().getTimeInMillis()));
 						if(Calendar.getInstance().getTimeInMillis() > closeTime) {
 							setStatus(0x00);
 							closeTime = -1;
+							update();
 						}
 					}
 					
 					if(openTime != -1) {
+						System.out.println("open:\t" + (openTime - Calendar.getInstance().getTimeInMillis()));
 						if(Calendar.getInstance().getTimeInMillis() > openTime) {
 							setStatus(0x07);
 							openTime = -1;
+							update();
 						}
 					}
 					
@@ -218,6 +221,9 @@ public class ExLightControl implements LightControl{
 			ctStatus += 16;
 			recFlag = false;
 		}
+		if(openTime != -1 || closeTime != -1) {
+			ctStatus += 32;
+		}
 		return ctStatus;
 	}
 	
@@ -258,7 +264,7 @@ public class ExLightControl implements LightControl{
 	public void setStatus(int status){
 		this.status = status;
 		this.update();
-		send((byte) (status % 7), (byte) this.status);
+		send((byte) (status % 8), (byte) this.status);
 	}
 
 	@Override
@@ -307,6 +313,7 @@ public class ExLightControl implements LightControl{
 		send(bfs, bfr);
 		
 		this.isRolling = true;
+		update();
 	}
 
 	@Override
@@ -316,25 +323,32 @@ public class ExLightControl implements LightControl{
 
 	@Override
 	public void play() {
+		isRolling = true;
+		update();
 		send((byte) 0x52,(byte) 0x52);
 	}
 
 	@Override
 	public void stop() {
+		isRolling = false;
+		update();
 		send((byte) 0x50, (byte) 0x50);
 	}
 
 	@Override
 	public void setCloseTime(long time) {
 		this.closeTime = time;
+		update();
 	}
 
 	@Override
 	public void setOpenTime(long time) {
 		this.openTime = time;
+		update();
 	}
 
 	@Override
+	// TODO Auto-generated method stub
 	public void close() {
 		runningFlag = false;
 		sp.closePort();
@@ -377,6 +391,12 @@ public class ExLightControl implements LightControl{
 	@Override
 	public boolean isPlaying() {
 		return isRolling;
+	}
+
+	@Override
+	public void cancel() {
+		this.openTime = -1;
+		this.closeTime = -1;
 	}
 
 }

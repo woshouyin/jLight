@@ -173,4 +173,11 @@ public class PLightControl implements LightControl {
 		return playing;
 	}
 
+
+	@Override
+	public void cancel() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

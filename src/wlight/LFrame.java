@@ -14,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -57,6 +58,9 @@ public class LFrame extends JFrame{
 	SerialPort[] sps = {};
 	LightControl lc = null;
 	boolean isConnected = false;
+	boolean isRolling = false;
+	boolean setted = false;
+	String lsts = "";
 	
 	//top
 	JComboBox<String> jcbComs;
@@ -148,6 +152,9 @@ public class LFrame extends JFrame{
 		jpBottom.add(jpBottomUp, BorderLayout.NORTH);
 		//Bottom |"设定开始"|Text|”设定关闭“|Text|BOTTON
 		JPanel jpBottomDown = new JPanel();
+		JPanel jpBottomDownL = new JPanel();
+		JPanel jpBottomDownLL = new JPanel();
+		JPanel jpBottomDownLR = new JPanel();
 		JLabel jlB3 = new JLabel("开启时间:");
 		JLabel jlB4 = new JLabel("关闭时间:");
 		jtfTst = new JTextField();
@@ -155,10 +162,16 @@ public class LFrame extends JFrame{
 		jbTset = new JButton("设置");
 		
 		jpBottomDown.setLayout(new BoxLayout(jpBottomDown, BoxLayout.X_AXIS));
-		jpBottomDown.add(jlB3);
-		jpBottomDown.add(jtfTst);
-		jpBottomDown.add(jlB4);
-		jpBottomDown.add(jtfTcl);
+		jpBottomDownLL.setLayout(new BoxLayout(jpBottomDownLL, BoxLayout.X_AXIS));
+		jpBottomDownLR.setLayout(new BoxLayout(jpBottomDownLR, BoxLayout.X_AXIS));
+		jpBottomDownL.setLayout(new GridLayout(1, 2));
+		jpBottomDownLL.add(jlB3);
+		jpBottomDownLL.add(jtfTst);
+		jpBottomDownLR.add(jlB4);
+		jpBottomDownLR.add(jtfTcl);
+		jpBottomDownL.add(jpBottomDownLL);
+		jpBottomDownL.add(jpBottomDownLR);
+		jpBottomDown.add(jpBottomDownL);
 		jpBottomDown.add(jbTset);
 		jpBottom.add(jpBottomDown, BorderLayout.SOUTH);
 		
@@ -230,18 +243,73 @@ public class LFrame extends JFrame{
 			
 			@Override
 			public void actionPerformed(ActionEvent even) {
-				String[] strs = jtfPl.getText().replace(" ", "").split(",");
-				int[] sts = new int[strs.length];
-				for(int i = 0; i < strs.length; i++) {
-					sts[i] = Integer.parseInt(strs[i]);
-				}
-				double delay = Double.parseDouble(jtfPt.getText());
-				if(!lc.isPlaying()) {
-					lc.play(sts, delay);
-					jbPlay.setText("暂停");
+				if(!isRolling) {
+					String str = jtfPl.getText();
+					if(!str.equals(lsts)) {
+						lsts = str;
+						String[] strs = jtfPl.getText().replace(" ", "").split(",");
+						int[] sts = new int[strs.length];
+						for(int i = 0; i < strs.length; i++) {
+							sts[i] = Integer.parseInt(strs[i]);
+						}
+						double delay = Double.parseDouble(jtfPt.getText());
+						lc.play(sts, delay);
+					}else {
+						System.out.println("gg");
+						lc.play();
+					}
 				}else {
 					lc.stop();
-					jbPlay.setText("播放");
+				}
+			}
+		});
+		
+		jbTset.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(!setted) {
+					Calendar ca = Calendar.getInstance();
+					long nt = ca.getTimeInMillis();
+					int time[] = new int[6];
+					time[5] = ca.get(Calendar.YEAR);
+					time[4] = ca.get(Calendar.MONTH);
+					time[3] = ca.get(Calendar.DAY_OF_MONTH);
+					time[2] = ca.get(Calendar.HOUR_OF_DAY);
+					time[1] = ca.get(Calendar.MINUTE);
+					time[0] = ca.get(Calendar.SECOND);
+					//设置开启时间
+					String[] str = jtfTst.getText().split("[^0-9]+");
+					int n = str.length > 6 ? 6 : str.length;
+					if(n > 0 && !"".equals((str[0]))) {
+						for(int i = 0; i < n; i++) {
+							int t = Integer.parseInt(str[str.length - i - 1]);
+							time[i] = t;
+						}
+						ca.set(time[5], time[4], time[3], time[2], time[1], time[0]);
+						if(ca.getTimeInMillis() <= nt && n <= 5) {
+							time[n]++;
+							ca.set(time[5], time[4], time[3], time[2], time[1], time[0]);
+						}
+						lc.setOpenTime(ca.getTimeInMillis());
+					}
+					//设置关闭时间
+					str = jtfTcl.getText().split("[^0-9]+");
+					n = str.length > 6 ? 6 : str.length;
+					if(str.length > 0 && !"".equals((str[0]))) {
+						for(int i = 0; i < str.length; i++) {
+							int t = Integer.parseInt(str[str.length - i - 1]);
+							time[i] = t;
+						}
+						ca.set(time[5], time[4], time[3], time[2], time[1], time[0]);
+						if(ca.getTimeInMillis() <= nt && n <= 5) {
+							time[n]++;
+							ca.set(time[5], time[4], time[3], time[2], time[1], time[0]);
+						}
+						lc.setCloseTime(ca.getTimeInMillis());
+					}
+				}else {
+					lc.cancel();
 				}
 			}
 		});
@@ -303,12 +371,12 @@ public class LFrame extends JFrame{
 			}else {
 				System.out.println("PLightControl");
 			}
+			this.isConnected = true;
+			this.jbConn.setText("断开");
 		} catch (LightControlException e) {
 			setStatusStr("连接失败", Color.RED);
 			e.printStackTrace();
 		}
-		this.isConnected = true;
-		this.jbConn.setText("断开");
 		lc.addLightControlListener(new LightControlListener() {
 			
 			@Override
@@ -317,10 +385,22 @@ public class LFrame extends JFrame{
 				jbL2.put((ctStatus >> 1) % 2);
 				jbL3.put((ctStatus >> 2) % 2);
 				if((ctStatus >> 3) % 2 == 1) {
-					
+					isRolling = true;
+					jbPlay.setText("暂停");
+				}else {
+					isRolling = false;
+					jbPlay.setText("播放");
 				}
 				if((ctStatus >> 4) % 2 == 1) {
 					setStatusStr("恢复正常", Color.GREEN);
+				}
+				
+				if((ctStatus >> 5) % 2 == 1) {
+					setted = true;
+					jbTset.setText("取消");
+				}else {
+					setted = false;
+					jbTset.setText("设置");
 				}
 			}
 			

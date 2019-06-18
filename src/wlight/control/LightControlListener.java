@@ -15,6 +15,7 @@ public interface LightControlListener {
 	 * 	3.0为关闭，1为开启
 	 * 第四位表示播放状态
 	 * 第五位表示异常恢复
+	 * 第六位表示当前是否在记时
 	 */
 	public void setStatus(int ctStatus);
 }

@@ -76,5 +76,9 @@ public interface LightControl {
 	 */
 	public boolean isPlaying();
 	
+	/**
+	 * 取消当前定时
+	 */
+	public void cancel();
 
 }
