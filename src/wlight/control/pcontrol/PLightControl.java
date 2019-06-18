@@ -17,9 +17,13 @@ public class PLightControl implements LightControl {
 	private int status = 0;
 	private SerialPort sp;
 	private int[] sts;
+	byte[] buffer;
 	private boolean playing;
+	private long delay;
+	private int a = 0;
 	
 	public PLightControl(SerialPort sp) throws LightControlException {
+		this.sp = sp;
 		System.out.println(sp.toString() + ":" + sp.getPortDescription());
 		if(!sp.isOpen() && !sp.openPort()) {
 			throw new LightControlException(LightControlException.CAN_NOT_OPEN_PORT);
@@ -58,42 +62,69 @@ public class PLightControl implements LightControl {
 	@Override
 	public void setStatus(int status) {
 		this.status = status;
+		put(status);
 	}
 
 	@Override
 	public void put(int light, int op) {
-		synchronized (sp) {
-			byte[] buff = {(byte) (light * 10 + op)};
-			sp.writeBytes(buff, 1);
-		}
+		byte[] buff = {(byte) (light * 16 + op)};
+		sp.writeBytes(buff, 1);
+	}
+	
+	public void put(int status) {
+		byte[] buff = {(byte) (status)};
+		sp.writeBytes(buff, 1);
+//		try {
+//			Thread.sleep(300);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		sp.readBytes(buffer, 1);
 	}
 
 	@Override
 	public void play(int[] sts, double delay) {
 		stop();
+		playing = true;
+		this.delay = (long) (delay + 0.5);
 		this.sts = sts;
+		a = 0;
+		play();
 	}
 
 	@Override
 	public void reset() {
-		
+		setStatus(0);
 	}
 
 	@Override
 	public void play() {
+		reset();
 		playing = true;
+		//int[] stsdefault = {1,2,4};
+		//long delay = 1000;
 		new Thread(new Runnable() {
 			
 			@Override
 			public void run() {
-				
+				// TODO Auto-generated method stub
+				while(playing) {
+					setStatus(sts[a]);
+					a = (a + 1) % sts.length;
+					try {
+						Thread.sleep(delay);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
 			}
-		});
+		}).start();
 	}
 
 	@Override
 	public void stop() {
-		
+		playing = false;
 	}
 
 
@@ -118,13 +149,13 @@ public class PLightControl implements LightControl {
 
 	@Override
 	public int getStatus() {
-		return 0;
+		return status;
 	}
 
 
 	@Override
 	public boolean isPlaying() {
-		return false;
+		return playing;
 	}
 
 }

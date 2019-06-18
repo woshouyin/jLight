@@ -5,6 +5,7 @@ public class LightControlException extends Exception{
 	public static final int TIME_OUT = 0;
 	public static final int CAN_NOT_OPEN_PORT = 1;
 	public static final int NO_RESPONSE = 2;
+	public static final int LOSE_CONNECTION = 3;
 	
 	private String msg;
 	private int flag;
@@ -18,6 +19,8 @@ public class LightControlException extends Exception{
 		case CAN_NOT_OPEN_PORT:
 			msg = "无法打开端口";
 			break;
+		case LOSE_CONNECTION:
+			msg = "连接中断";
 		default:
 			msg = "异常标志错误";
 			break;
