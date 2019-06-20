@@ -2,8 +2,6 @@ package wlight;
 
 import java.awt.Graphics;
 import java.awt.Image;
-import java.util.Calendar;
-
 import javax.swing.JButton;
 
 public class LButton extends JButton{

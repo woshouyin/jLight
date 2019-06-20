@@ -5,8 +5,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.PseudoColumnUsage;
-
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import com.fazecast.jSerialComm.SerialPort;

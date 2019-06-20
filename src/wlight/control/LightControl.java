@@ -1,13 +1,5 @@
 package wlight.control;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Calendar;
-
-import com.fazecast.jSerialComm.SerialPort;
-
-import wlight.control.excontrol.ExLightControl;
-
 public interface LightControl {
 	/**
 	 * 设置当前led灯的状态
@@ -76,5 +68,9 @@ public interface LightControl {
 	 */
 	public boolean isPlaying();
 	
+	/**
+	 * 取消当前定时
+	 */
+	public void cancel();
 
 }

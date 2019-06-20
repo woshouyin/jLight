@@ -1,14 +1,6 @@
 package wlight.control.pcontrol;
 
-import java.io.IOException;
-import java.sql.Time;
-import java.util.Date;
-
 import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
-import com.fazecast.jSerialComm.SerialPortPacketListener;
-
 import wlight.control.LightControl;
 import wlight.control.LightControlException;
 import wlight.control.LightControlListener;
@@ -22,7 +14,8 @@ public class PLightControl implements LightControl {
 	private long delay;
 	private int a = 0;
 	private LightControlListener listener;
-	private boolean timing;
+	private boolean timingOpen;
+	private boolean timingClose;
 	
 	public PLightControl(SerialPort sp) throws LightControlException {
 		this.sp = sp;
@@ -93,7 +86,8 @@ public class PLightControl implements LightControl {
 	
 	@Override
 	public void close() {
-		timing = false;
+		timingOpen = false;
+		timingClose = false;
 		playing = false;
 		sp.closePort();
 	}
@@ -103,7 +97,7 @@ public class PLightControl implements LightControl {
 		if(playing) {
 			ctStatus += 8;
 		}
-		if(timing) {
+		if(timingOpen || timingClose) {
 			ctStatus += 32;
 		}
 		return ctStatus;
@@ -111,10 +105,11 @@ public class PLightControl implements LightControl {
 	
 	@Override
 	public void setStatus(int status) {
+		this.status = status;
 		if(listener!=null) {
 			byte[] buff = {(byte) (status)};
 //			System.out.println();
-			listener.setStatus(getCtStatus());
+			listener.sendStatus(getCtStatus());
 			sp.writeBytes(buff, 1);
 		}
 	}
@@ -123,10 +118,11 @@ public class PLightControl implements LightControl {
 	public void put(int light, int op) {
 //		byte[] buff = {(byte) (light * 16 + op)};		
 		int mask = 1 << (light - 1);
+		int status = 0;
 		if(op == 1) {
-			this.status = this.status | mask;
+			status = this.status | mask;
 		}else {
-			this.status = this.status & ~mask;
+			status = this.status & ~mask;
 		}
 		setStatus(status);
 	}
@@ -166,7 +162,7 @@ public class PLightControl implements LightControl {
 			
 			@Override
 			public void run() {
-				while(playing) {
+				while(playing && sts != null) {
 					put(sts[a]);
 					a = (a + 1) % sts.length;
 					try {
@@ -182,29 +178,31 @@ public class PLightControl implements LightControl {
 	@Override
 	public void stop() {
 		playing = false;
+		listener.sendStatus(getCtStatus());
 	}
 
 
 	@Override
 	public void setCloseTime(long time) {
 		if(time>=0) {
+			timingClose = true;
+			listener.sendStatus(getCtStatus());
 			new Thread(new Runnable() {
 				
 				@Override
 				public void run() {
 					
-					while(System.currentTimeMillis()<time&&timing) {
+					while(System.currentTimeMillis()<time&&timingClose) {
 						try {
 							Thread.sleep(1000);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
 					}
-					if(timing) {
-						put(1,0);
-						put(2,0);
-						put(3,0);
-						timing = false;
+					if(timingClose) {
+						setStatus(0x00);
+						timingClose = false;
+						listener.sendStatus(getCtStatus());
 					}
 				}
 			}).start();
@@ -216,32 +214,34 @@ public class PLightControl implements LightControl {
 	@Override
 	public void setOpenTime(long time) {
 		if(time>=0) {
-			timing = true;
+			timingOpen = true;
+			listener.sendStatus(getCtStatus());
 			new Thread(new Runnable() {
 				
 				@Override
 				public void run() {
 					
-					while(System.currentTimeMillis()<time&&timing) {
+					while(System.currentTimeMillis()<time&&timingOpen) {
 						try {
 							Thread.sleep(1000);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
 					}
-					if(timing) {
-						put(1,1);
-						put(2,1);
-						put(3,1);
+					if(timingOpen) {
+						setStatus(0x07);
+						timingOpen = false;
+						listener.sendStatus(getCtStatus());
 					}
-					
 				}
 			}).start();
 		}
 	}
 	
 	public void cancel() {
-		timing = false;
+		timingOpen = false;
+		timingClose = false;
+		listener.sendStatus(getCtStatus());
 	}
 
 

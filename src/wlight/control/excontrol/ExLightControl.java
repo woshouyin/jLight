@@ -1,8 +1,5 @@
 package wlight.control.excontrol;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -13,7 +10,7 @@ import wlight.control.LightControlException;
 import wlight.control.LightControlListener;
 
 public class ExLightControl implements LightControl{
-	private int ttl = 20;
+	private int ttl = 5;
 	private boolean runningFlag = true;
 	private boolean isRolling = false;
 	private double delay;
@@ -44,21 +41,26 @@ public class ExLightControl implements LightControl{
 			long rckt = 0;
 			@Override
 			public void run() {
-				//long bc = Calendar.getInstance().getTimeInMillis();
 				buffer = new byte[64];
 				t = 0;
 				while(runningFlag) {
 					if(closeTime != -1) {
+						//System.out.println("close:\t" + ( closeTime - Calendar.getInstance().getTimeInMillis()));
 						if(Calendar.getInstance().getTimeInMillis() > closeTime) {
+							stop();
 							setStatus(0x00);
 							closeTime = -1;
+							update();
 						}
 					}
 					
 					if(openTime != -1) {
+						//System.out.println("open:\t" + (openTime - Calendar.getInstance().getTimeInMillis()));
 						if(Calendar.getInstance().getTimeInMillis() > openTime) {
+							stop();
 							setStatus(0x07);
 							openTime = -1;
+							update();
 						}
 					}
 					
@@ -169,10 +171,10 @@ public class ExLightControl implements LightControl{
 				}else if(b.msg >= 0x60 && b.msg < 0x70 || b.msg == (byte)0xEA 
 						|| b.msg == 0x51 || b.msg == 0x52 || b.msg == (byte)0xFF){
 					send((byte) 0x40, null);
-					lossFlag = true;
 					while(!wait.isEmpty() && wait.remove().msg != inp);
 					if(rct == 0) {
 						rct = maxRct;
+						lossFlag = true;
 						throw new LightControlException(LightControlException.TIME_OUT);
 					}else {
 						rct--;
@@ -218,6 +220,9 @@ public class ExLightControl implements LightControl{
 			ctStatus += 16;
 			recFlag = false;
 		}
+		if(openTime != -1 || closeTime != -1) {
+			ctStatus += 32;
+		}
 		return ctStatus;
 	}
 	
@@ -250,7 +255,7 @@ public class ExLightControl implements LightControl{
 	 */
 	private void update() {
 		if(listener != null) {
-			listener.setStatus(getCtStatus());
+			listener.sendStatus(getCtStatus());
 		}
 	}
 	
@@ -258,7 +263,7 @@ public class ExLightControl implements LightControl{
 	public void setStatus(int status){
 		this.status = status;
 		this.update();
-		send((byte) (status % 7), (byte) this.status);
+		send((byte) (status % 8), (byte) this.status);
 	}
 
 	@Override
@@ -307,6 +312,7 @@ public class ExLightControl implements LightControl{
 		send(bfs, bfr);
 		
 		this.isRolling = true;
+		update();
 	}
 
 	@Override
@@ -316,22 +322,28 @@ public class ExLightControl implements LightControl{
 
 	@Override
 	public void play() {
+		isRolling = true;
+		update();
 		send((byte) 0x52,(byte) 0x52);
 	}
 
 	@Override
 	public void stop() {
+		isRolling = false;
+		update();
 		send((byte) 0x50, (byte) 0x50);
 	}
 
 	@Override
 	public void setCloseTime(long time) {
 		this.closeTime = time;
+		update();
 	}
 
 	@Override
 	public void setOpenTime(long time) {
 		this.openTime = time;
+		update();
 	}
 
 	@Override
@@ -342,6 +354,7 @@ public class ExLightControl implements LightControl{
 	
 	private static class WaitBean {
 		byte msg;
+		@SuppressWarnings("unused")
 		long time;
 		
 		public WaitBean(byte msg, long time) {
@@ -364,9 +377,11 @@ public class ExLightControl implements LightControl{
 	private void updateStatus(int status, boolean isRolling) {
 		this.isRolling = isRolling;
 		if(isRolling && delay <= 10) {
-			this.status = 0;
-			for(int s : sts) {
-				this.status = this.status | s;
+				this.status = 0;
+			if(sts != null) {
+				for(int s : sts) {
+					this.status = this.status | s;
+				}
 			}
 		}else {
 			this.status = status;
@@ -377,6 +392,12 @@ public class ExLightControl implements LightControl{
 	@Override
 	public boolean isPlaying() {
 		return isRolling;
+	}
+
+	@Override
+	public void cancel() {
+		this.openTime = -1;
+		this.closeTime = -1;
 	}
 
 }
