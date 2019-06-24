@@ -11,6 +11,8 @@ import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -50,6 +52,7 @@ public class LFrame extends JFrame{
 	boolean setted = false;
 	String lsts = "";
 	double ldelay = -1;
+	long lpt = 0;
 	
 	//top
 	JComboBox<String> jcbComs;
@@ -265,6 +268,32 @@ public class LFrame extends JFrame{
 			}
 		});
 		
+		this.addWindowListener(new WindowListener() {
+			@Override
+			public void windowOpened(WindowEvent e) {}
+			@Override
+			public void windowIconified(WindowEvent e) {}
+			@Override
+			public void windowDeiconified(WindowEvent e) {}
+			@Override
+			public void windowDeactivated(WindowEvent e) {}
+			@Override
+			public void windowClosing(WindowEvent e) {
+				Thread t = new Thread(new Runnable() {
+					@Override
+					public void run() {
+						disconnect();
+					}
+				});
+				t.setDaemon(true);
+				t.start();
+			}
+			@Override
+			public void windowClosed(WindowEvent e) {}
+			@Override
+			public void windowActivated(WindowEvent e) {}
+		});;
+		
 		Thread ft = new Thread(new Runnable() {
 			
 			@Override
@@ -348,10 +377,16 @@ public class LFrame extends JFrame{
 				jbL2.put((ctStatus >> 1) % 2);
 				jbL3.put((ctStatus >> 2) % 2);
 				if((ctStatus >> 3) % 2 == 1) {
-					isRolling = true;
+					if(!isRolling) {
+						isRolling = true;
+						setStatusStr("继续播放", MyColor.DARK_GREEN);
+					}
 					jbPlay.setText("暂停");
 				}else {
-					isRolling = false;
+					if(isRolling) {
+						isRolling = false;
+						setStatusStr("已暂停", Color.MAGENTA);
+					}
 					jbPlay.setText("播放");
 				}
 				if((ctStatus >> 4) % 2 == 1) {
@@ -387,17 +422,20 @@ public class LFrame extends JFrame{
 	}
 	
 	public void disconnect() {
-		lc.close();
-		lc = null;
-		isConnected = false;
-		isRolling = false;
-		setted = false;
-		jbPlay.setText("播放");
-		jbTset.setText("设置");
-		lsts = "";
-		ldelay = -1;
-		this.setStatusStr("已断开", Color.RED);
-		jbConn.setText("连接");
+		if(lc != null) {
+			lc.close();
+			setStatusStr("已暂停", Color.MAGENTA);
+			lc = null;
+			isConnected = false;
+			isRolling = false;
+			setted = false;
+			jbPlay.setText("播放");
+			jbTset.setText("设置");
+			lsts = "";
+			ldelay = -1;
+			this.setStatusStr("已断开", Color.RED);
+			jbConn.setText("连接");
+		}
 	}
 	
 	public void playOrPause() {
@@ -418,9 +456,8 @@ public class LFrame extends JFrame{
 				setStatusStr("延时设置为非正", Color.RED);
 				return;
 			}
-			if(!str.equals(lsts) || dl != ldelay) {
-				lsts = str;
-				ldelay = dl;
+			long t = Calendar.getInstance().getTimeInMillis();
+			if(!str.equals(lsts) || dl != ldelay || t - lpt < 200) {
 				String[] strs = str.replace(" ", "").split(",");
 				int[] sts = new int[strs.length];
 				for(int i = 0; i < strs.length; i++) {
@@ -431,6 +468,9 @@ public class LFrame extends JFrame{
 						return;
 					}
 				}
+
+				lsts = str;
+				ldelay = dl;
 				lc.play(sts, dl);
 				setStatusStr("从头开始播放", MyColor.DARK_GREEN);
 			}else {
@@ -438,6 +478,7 @@ public class LFrame extends JFrame{
 				setStatusStr("继续播放", MyColor.DARK_GREEN);
 			}
 		}else {
+			lpt = Calendar.getInstance().getTimeInMillis();
 			lc.stop();
 			setStatusStr("已暂停", Color.MAGENTA);
 		}
@@ -474,7 +515,7 @@ public class LFrame extends JFrame{
 					time[n]++;
 					ca.set(time[5], time[4], time[3], time[2], time[1], time[0]);
 				}
-				lc.setOpenTime(ca.getTimeInMillis());
+				lc.setOpenTime(ca.getTimeInMillis() / 1000 * 1000);
 				strSt = sdf.format(ca.getTime());
 			}
 			//设置关闭时间
@@ -497,7 +538,7 @@ public class LFrame extends JFrame{
 					time[n]++;
 					ca.set(time[5], time[4], time[3], time[2], time[1], time[0]);
 				}
-				lc.setCloseTime(ca.getTimeInMillis());
+				lc.setCloseTime(ca.getTimeInMillis() / 1000 * 1000);
 				strCl = sdf.format(ca.getTime());
 			}
 			if(strSt != null && strCl != null) {

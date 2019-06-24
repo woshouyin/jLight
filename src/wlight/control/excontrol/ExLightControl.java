@@ -10,10 +10,10 @@ import wlight.control.LightControlException;
 import wlight.control.LightControlListener;
 
 public class ExLightControl implements LightControl{
-	private int ttl = 5;
+	private int ttl = 10;
 	private boolean runningFlag = true;
 	private boolean isRolling = false;
-	private double delay;
+	private double delay = 0;
 	private int[] sts;
 	private int maxRct = 5;
 	private int rct = maxRct;
@@ -108,7 +108,7 @@ public class ExLightControl implements LightControl{
 					send((byte)0x40, null);
 				}
 				//滚动播放时状态检测
-				if(isRolling && delay > 10) {
+				if(isRolling && (delay > 10 || delay == 0)) {
 					long nt = Calendar.getInstance().getTimeInMillis();
 					if(nt - rckt > 50) {
 						rckt = nt;
@@ -194,7 +194,7 @@ public class ExLightControl implements LightControl{
 					}
 				}else {
 					wait.clear();
-					System.out.println("0x" + Integer.toHexString(b.msg));
+					System.out.println("0x" + Integer.toHexString(inp) + ">>0x" + Integer.toHexString(b.msg));
 					throw new LightControlException(LightControlException.TIME_OUT);
 				}
 			}else {
@@ -291,6 +291,7 @@ public class ExLightControl implements LightControl{
 		Byte[] bfr = new Byte[3 + this.sts.length + 2];
 		int i = 0;
 		int d = (int)(this.delay * 2 + 0.5);
+		d = d >= 1 ? d : 1;
 		int f = 0;
 		for(f = 0; f < 7 && d % 2 == 0; f++) {		//32, 
 			d /= 2;
@@ -376,7 +377,7 @@ public class ExLightControl implements LightControl{
 	/**设置状态并更新状态*/
 	private void updateStatus(int status, boolean isRolling) {
 		this.isRolling = isRolling;
-		if(isRolling && delay <= 10) {
+		if(isRolling && delay <= 10 && delay != 0) {
 				this.status = 0;
 			if(sts != null) {
 				for(int s : sts) {
